@@ -4,7 +4,25 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
 )
+
+func cleanBody(body string) string {
+	wordsToReplace := []string{"kerfuffle", "sharbert", "fornax"}
+	bodyWords := strings.Fields(body)
+
+	for i, word := range bodyWords {
+		loweredWord := strings.ToLower(word)
+		for _, replacement := range wordsToReplace {
+			if loweredWord == replacement {
+				bodyWords[i] = "****"
+				break
+			}
+		}
+	}
+
+	return strings.Join(bodyWords, " ")
+}
 
 func handlerValidation(w http.ResponseWriter, req *http.Request) {
 	type Parameters struct {
@@ -25,10 +43,10 @@ func handlerValidation(w http.ResponseWriter, req *http.Request) {
 	}
 
 	type ValidReturnVals struct {
-		Valid bool `json:"valid"`
+		CleanedBody string `json:"cleaned_body"`
 	}
 	respBody := ValidReturnVals{
-		Valid: true,
+		CleanedBody: cleanBody(params.Body),
 	}
 	response, err := json.Marshal(respBody)
 	if err != nil {
