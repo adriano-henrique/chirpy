@@ -15,6 +15,7 @@ func apiRouter(configMetrics *metricsApiConfig) http.Handler {
 	r := chi.NewRouter()
 	r.Get("/healthz", handlerReadiness)
 	r.Get("/metrics", configMetrics.handlerMetrics)
+	r.Post("/validate_chirp", handlerValidation)
 	return r
 }
 
