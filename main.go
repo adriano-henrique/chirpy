@@ -1,26 +1,27 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
+
+	"github.com/go-chi/chi/v5"
 )
 
 type metricsApiConfig struct {
 	fileServerHits int
 }
 
-func (cfg *metricsApiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		cfg.fileServerHits++
-		next.ServeHTTP(w, r)
-	})
+func apiRouter(configMetrics *metricsApiConfig) http.Handler {
+	r := chi.NewRouter()
+	r.Get("/healthz", handlerReadiness)
+	r.Get("/metrics", configMetrics.handlerMetrics)
+	return r
 }
 
-func (cfg *metricsApiConfig) handlerMetrics(w http.ResponseWriter, req *http.Request) {
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(fmt.Sprintf("Hits: %d", cfg.fileServerHits)))
+func adminRouter(configMetrics *metricsApiConfig) http.Handler {
+	r := chi.NewRouter()
+	r.Get("/metrics", configMetrics.handlerAdminMetrics)
+	return r
 }
 
 func main() {
@@ -32,13 +33,13 @@ func main() {
 	}
 
 	r := chi.NewRouter()
+	fsHandler := configMetrics.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(filePathRoot))))
+	r.Handle("/app/*", fsHandler)
+	r.Handle("/app", fsHandler)
+	r.Mount("/api", apiRouter(&configMetrics))
+	r.Mount("/admin", adminRouter(&configMetrics))
 
-	serveMux := http.NewServeMux()
-	serveMux.Handle("/app/", configMetrics.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(filePathRoot)))))
-	serveMux.HandleFunc("/healthz", handlerReadiness)
-	serveMux.HandleFunc("/metrics", configMetrics.handlerMetrics)
-
-	corsMux := middlewareCors(serveMux)
+	corsMux := middlewareCors(r)
 	newServer := &http.Server{
 		Addr:    ":" + port,
 		Handler: corsMux,
