@@ -4,7 +4,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/go-chi/chi/v5"
+	chi "github.com/go-chi/chi/v5"
 )
 
 type metricsApiConfig struct {
@@ -15,7 +15,7 @@ func apiRouter(configMetrics *metricsApiConfig) http.Handler {
 	r := chi.NewRouter()
 	r.Get("/healthz", handlerReadiness)
 	r.Get("/metrics", configMetrics.handlerMetrics)
-	r.Post("/validate_chirp", handlerValidation)
+	r.Post("/chirp", handlerValidation)
 	return r
 }
 
